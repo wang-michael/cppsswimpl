@@ -1,12 +1,15 @@
 //
 // Created by root on 12/29/19.
 // g++ cppinvokepython.cc -o cppinvokepython -lpython3.5m
-// g++ Cryptosystem.cc main.cpp -o sswimpl -L. -lpbc -lgmp
 
 #include "cppinvokepython.hh"
 #include "python3.5/Python.h"
 #include <iostream>
 #include <sstream>
+
+#include <string>
+#include <fstream>
+
 #include <string>
 using namespace std;
 
@@ -15,6 +18,19 @@ string int2str(int &i) {
     stringstream ss(s);
     ss << i;
     return ss.str();
+}
+
+//从文件读入到string里
+const char* readFileIntoString(char * filename)
+{
+    ifstream ifile(filename);
+//将文件读入到ostringstream对象buf中
+    ostringstream buf;
+    char ch;
+    while(buf&&ifile.get(ch))
+        buf.put(ch);
+//返回与流对象buf关联的字符串
+    return buf.str().data();
 }
 
 int main()
@@ -85,6 +101,10 @@ int main()
 
     cout << vector1str << "     " << tokenstr << endl;
 
+//    从外部文件中读取秘钥
+    PyObject_CallMethod(pIns, "loadSecrets", NULL);
+
+
     // 加密数据
     PyObject* argsForEncrypt = PyTuple_New(1);
     PyObject* arg1ForEncrypt = Py_BuildValue("s", "3,-2,0,0,0,0,0,0,0,0");    // 参数一设为，字符串
@@ -94,16 +114,30 @@ int main()
 
     const char* encryptRes = PyUnicode_AsUTF8(pRet);
 
+    // 以写模式打开文件
+    ofstream outfile;
+    outfile.open("/home/michael/graducatepaper/cppsswimpl/encrypts.txt");
+    outfile << encryptRes;
+    outfile.close();
+
+
+
     // 加密token
     PyObject* argsForToken = PyTuple_New(1);
     PyObject* arg1ForToken = Py_BuildValue("s", "2,3,0,0,0,0,0,0,0,0");    // 参数一设为，字符串
     PyTuple_SetItem(argsForToken, 0, arg1ForToken);
 
     PyObject* pRet1 = PyObject_CallMethod(pIns, "genToken", "O", argsForToken);
-
+    cout << "genToken finished！" << endl;
     const char* encryptToken = PyUnicode_AsUTF8(pRet1);
 
     PyObject* argsForQuery = PyTuple_New(2);       // 2个参数
+
+    //文件名
+//    char * fn="/home/michael/graducatepaper/cppsswimpl/encrypts.txt";
+//    const char* encryptRes = readFileIntoString(fn);
+//    cout << encryptRes << endl;
+
     PyObject* arg1ForQuery = Py_BuildValue("s", encryptRes);    // 参数一设为，字符串
     PyObject* arg2ForQuery = Py_BuildValue("s", encryptToken);    // 参数二设为，一个整数，用long表示
     PyTuple_SetItem(argsForQuery, 0, arg1ForQuery);
